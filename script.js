@@ -2,36 +2,29 @@
    グローバル変数
 --------------------------------------------------------- */
 let poseLandmarker = null;
-let runningMode = "IMAGE"; // "IMAGE" or "VIDEO"
+let runningMode = "IMAGE";
 let liveStream = null;
 let liveAnimationId = null;
 let videoAnimationId = null;
 
 let compareChart = null;
 
-// 解析履歴（グラフ用）
 const historyLabels = [];
 const historyPelvis = [];
 const historyHipAbd = [];
 const historyHipAdd = [];
 const historySpeed = [];
 
-// 前回値との比較用
 let previousStability = null;
 let previousSymmetry = null;
 
 /* ---------------------------------------------------------
    MediaPipe PoseLandmarker 初期化
-   ※ グローバルでは呼ばず、必要なときに await で呼ぶ
 --------------------------------------------------------- */
 async function initPoseLandmarker() {
   if (poseLandmarker) return;
 
-  if (
-    !window.FilesetResolver ||
-    !window.PoseLandmarker ||
-    !window.DrawingUtils
-  ) {
+  if (!window.FilesetResolver || !window.PoseLandmarker || !window.DrawingUtils) {
     console.error("MediaPipe がまだ読み込まれていません。");
     return;
   }
@@ -53,7 +46,7 @@ async function initPoseLandmarker() {
 }
 
 /* ---------------------------------------------------------
-   手術日 → 手術前◯日 / 手術後◯日 を自動表示
+   手術日 → 手術前◯日 / 手術後◯日
 --------------------------------------------------------- */
 document.getElementById("surgeryDate").addEventListener("change", () => {
   const inputDate = new Date(document.getElementById("surgeryDate").value);
@@ -75,7 +68,7 @@ document.getElementById("surgeryDate").addEventListener("change", () => {
 });
 
 /* ---------------------------------------------------------
-   モード切替（撮影補助 ↔ 動作解析）
+   モード切替
 --------------------------------------------------------- */
 document.getElementById("liveModeBtn").addEventListener("click", () => {
   document.getElementById("liveSection").classList.add("active");
@@ -94,7 +87,7 @@ document.getElementById("videoModeBtn").addEventListener("click", () => {
 });
 
 /* ---------------------------------------------------------
-   撮影補助モード：チェックリストが全てONで撮影開始ボタンを有効化
+   撮影補助モード：チェックリスト
 --------------------------------------------------------- */
 const prechecks = document.querySelectorAll(".precheck");
 prechecks.forEach((chk) => {
@@ -105,8 +98,7 @@ prechecks.forEach((chk) => {
 });
 
 /* ---------------------------------------------------------
-   ユーティリティ：角度計算
-   angle(A, B, C) = ∠ABC（度）
+   角度計算
 --------------------------------------------------------- */
 function angleDeg(ax, ay, bx, by, cx, cy) {
   const v1x = ax - bx;
@@ -125,7 +117,7 @@ function angleDeg(ax, ay, bx, by, cx, cy) {
 }
 
 /* ---------------------------------------------------------
-   撮影補助モード：カメラ起動＋骨格描画
+   撮影補助モード：カメラ起動
 --------------------------------------------------------- */
 document.getElementById("startLiveBtn").addEventListener("click", async () => {
   try {
@@ -133,7 +125,7 @@ document.getElementById("startLiveBtn").addEventListener("click", async () => {
 
     if (!poseLandmarker) {
       document.getElementById("liveError").textContent =
-        "骨格モデルの読み込みに失敗しました。ネットワーク環境を確認してください。";
+        "骨格モデルの読み込みに失敗しました。";
       return;
     }
 
@@ -147,6 +139,12 @@ document.getElementById("startLiveBtn").addEventListener("click", async () => {
     const ctx = canvas.getContext("2d");
 
     video.srcObject = liveStream;
+
+    // ★ フルスクリーン防止
+    video.setAttribute("playsinline", "");
+    video.setAttribute("webkit-playsinline", "");
+    video.muted = true;
+
     await video.play();
 
     canvas.width = video.videoWidth;
@@ -188,12 +186,12 @@ document.getElementById("startLiveBtn").addEventListener("click", async () => {
   } catch (err) {
     console.error(err);
     document.getElementById("liveError").textContent =
-      "カメラを起動できませんでした。権限や通信環境を確認してください。";
+      "カメラを起動できませんでした。";
   }
 });
 
 /* ---------------------------------------------------------
-   撮影補助モード：カメラ停止
+   カメラ停止
 --------------------------------------------------------- */
 document.getElementById("stopLiveBtn").addEventListener("click", () => {
   if (liveAnimationId) {
@@ -208,7 +206,7 @@ document.getElementById("stopLiveBtn").addEventListener("click", () => {
 });
 
 /* ---------------------------------------------------------
-   動作解析モード：動画読み込み（動画は1つだけ）
+   動画読み込み
 --------------------------------------------------------- */
 let loadedVideoURL = null;
 
@@ -218,6 +216,12 @@ document.getElementById("videoFileInput").addEventListener("change", (e) => {
 
   loadedVideoURL = URL.createObjectURL(file);
   const video = document.getElementById("analysisVideo");
+
+  // ★ フルスクリーン防止
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+  video.muted = true;
+
   video.src = loadedVideoURL;
 });
 
@@ -284,9 +288,7 @@ function updateCompareChart() {
 }
 
 /* ---------------------------------------------------------
-   動作解析：骨格描画＋骨盤傾斜・股関節角度（最大値）＋歩行速度
-   ＋ 歩行の安定性・左右差（前回比較）＋折れ線グラフ
-   ※ 動画再生中は常に骨格モデルを重ね描画
+   動作解析
 --------------------------------------------------------- */
 async function analyzeVideo() {
   if (!loadedVideoURL) {
@@ -299,7 +301,7 @@ async function analyzeVideo() {
 
   if (!poseLandmarker) {
     document.getElementById("videoError").textContent =
-      "骨格モデルの読み込みに失敗しました。ネットワーク環境を確認してください。";
+      "骨格モデルの読み込みに失敗しました。";
     return;
   }
 
@@ -308,16 +310,26 @@ async function analyzeVideo() {
   const ctx = canvas.getContext("2d");
   const drawingUtils = new window.DrawingUtils(ctx);
 
-  document.getElementById("videoError").textContent = "";
-  document.getElementById("videoStatus").textContent = "解析中…";
+  // ★ フルスクリーン防止
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+  video.muted = true;
+
+  // controls のフルスクリーン誘発を防ぐ
+  video.controls = false;
 
   await video.play();
+
+  // 再生開始後に controls を戻す
+  setTimeout(() => {
+    video.controls = true;
+  }, 300);
+
   video.currentTime = 0;
 
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
 
-  // 計測用
   let maxPelvisTilt = 0;
   let maxHipAbduction = 0;
   let maxHipAdduction = 0;
@@ -343,7 +355,6 @@ async function analyzeVideo() {
     if (result && result.landmarks && result.landmarks.length > 0) {
       const lm = result.landmarks[0];
 
-      // 描画（動画再生中は常に骨格モデルを重ねる）
       drawingUtils.drawLandmarks(lm, {
         radius: 3,
         color: "#ff3b30",
@@ -354,19 +365,16 @@ async function analyzeVideo() {
         { color: "#007aff", lineWidth: 2 }
       );
 
-      // 必要ランドマーク（右側を基準）
-      const rightHip = lm[24];   // 右股関節
-      const rightKnee = lm[26];  // 右膝
-      const rightAnkle = lm[28]; // 右足首
-      const leftHip = lm[23];    // 左股関節
+      const rightHip = lm[24];
+      const rightKnee = lm[26];
+      const rightAnkle = lm[28];
+      const leftHip = lm[23];
 
-      // 骨盤中心
       const pelvisCenter = {
         x: (rightHip.x + leftHip.x) / 2,
         y: (rightHip.y + leftHip.y) / 2,
       };
 
-      // 骨盤傾斜（左右股関節の高さ差を角度化）
       const pelvisTilt = angleDeg(
         leftHip.x,
         leftHip.y,
@@ -377,7 +385,6 @@ async function analyzeVideo() {
       );
       if (pelvisTilt > maxPelvisTilt) maxPelvisTilt = pelvisTilt;
 
-      // 股関節角度（大腿と骨盤の角度）
       const hipAngle = angleDeg(
         rightKnee.x,
         rightKnee.y,
@@ -387,9 +394,6 @@ async function analyzeVideo() {
         pelvisCenter.y
       );
 
-      // 仮に：
-      //  20°以上 → 外転優位
-      //  10°未満 → 内転優位
       if (hipAngle >= 20 && hipAngle > maxHipAbduction) {
         maxHipAbduction = hipAngle;
       }
@@ -397,7 +401,6 @@ async function analyzeVideo() {
         maxHipAdduction = hipAngle;
       }
 
-      // 歩行速度（かなり簡易）：足首の水平移動距離 / 時間
       const currentTime = video.currentTime;
       const currentFootX = rightAnkle.x;
 
@@ -419,7 +422,6 @@ async function analyzeVideo() {
       videoAnimationId = null;
     }
 
-    // 歩行速度（仮）：画面幅を 1m と仮定して計算
     let gaitSpeed = 0;
     if (
       firstFrameTime !== null &&
@@ -428,77 +430,63 @@ async function analyzeVideo() {
       firstFootX !== null &&
       lastFootX !== null
     ) {
-      const dx = Math.abs(lastFootX - firstFootX); // 正規化座標
-      const distanceMeters = dx * 1.0; // 仮に 1.0m
+      const dx = Math.abs(lastFootX - firstFootX);
+      const distanceMeters = dx * 1.0;
       const dt = lastFrameTime - firstFrameTime;
       gaitSpeed = distanceMeters / dt;
     }
 
-    // 歩行の安定性・左右差（簡易指標）
     const currentStability = 100 - maxPelvisTilt;
     const currentSymmetry = 100 - Math.abs(maxPelvisTilt);
 
     const stabilityElem = document.getElementById("stabilityResult");
     const symmetryElem = document.getElementById("symmetryResult");
 
-    const threshold = 1.0; // 変化判定のしきい値（度）
+    const threshold = 1.0;
 
-    // 歩行の安定性
     if (previousStability === null) {
       stabilityElem.textContent =
         "歩行の安定性：今回が初回の測定です。前回との比較はありません。";
     } else {
       const diff = currentStability - previousStability;
       if (diff > threshold) {
-        stabilityElem.textContent =
-          "歩行の安定性：良くなってきています";
+        stabilityElem.textContent = "歩行の安定性：良くなってきています";
       } else if (Math.abs(diff) <= threshold) {
-        stabilityElem.textContent =
-          "歩行の安定性：変わりありません";
+        stabilityElem.textContent = "歩行の安定性：変わりありません";
       } else {
-        stabilityElem.textContent =
-          "歩行の安定性：悪くなっています";
+        stabilityElem.textContent = "歩行の安定性：悪くなっています";
       }
     }
 
-    // 左右差
     if (previousSymmetry === null) {
       symmetryElem.textContent =
         "左右差：今回が初回の測定です。前回との比較はありません。";
     } else {
       const diff = currentSymmetry - previousSymmetry;
       if (diff > threshold) {
-        symmetryElem.textContent =
-          "左右差：良くなってきています";
+        symmetryElem.textContent = "左右差：良くなってきています";
       } else if (Math.abs(diff) <= threshold) {
-        symmetryElem.textContent =
-          "左右差：変わりありません";
+        symmetryElem.textContent = "左右差：変わりありません";
       } else {
-        symmetryElem.textContent =
-          "左右差：悪くなっています";
+        symmetryElem.textContent = "左右差：悪くなっています";
       }
     }
 
     previousStability = currentStability;
     previousSymmetry = currentSymmetry;
 
-    // 結果表示
     document.getElementById("pelvisResult").textContent =
       `骨盤傾斜（最大）：${maxPelvisTilt.toFixed(1)}°`;
-
     document.getElementById("hipAbductionResult").textContent =
       `股関節外転角度（最大）：${maxHipAbduction.toFixed(1)}°`;
-
     document.getElementById("hipAdductionResult").textContent =
       `股関節内転角度（最大）：${maxHipAdduction.toFixed(1)}°`;
-
     document.getElementById("speedResult").textContent =
       `歩行速度（推定）：${gaitSpeed.toFixed(2)} m/秒`;
 
     document.getElementById("resultBox").style.display = "block";
     document.getElementById("videoStatus").textContent = "解析完了";
 
-    // テーブルに記録
     const tbody = document.querySelector("#resultTable tbody");
     const row = document.createElement("tr");
 
@@ -514,7 +502,6 @@ async function analyzeVideo() {
     `;
     tbody.appendChild(row);
 
-    // グラフ用履歴に追加
     historyLabels.push(conditionLabel);
     historyPelvis.push(maxPelvisTilt.toFixed(1));
     historyHipAbd.push(maxHipAbduction.toFixed(1));

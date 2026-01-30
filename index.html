@@ -131,6 +131,7 @@
       max-width: 100%;
       border-radius: 12px;
       margin-top: 12px;
+      object-fit: contain;
     }
 
     button {
@@ -217,7 +218,8 @@
           <label><input type="checkbox" class="precheck" /> 普段どおりの速度で歩いている</label>
         </div>
 
-        <video id="liveVideo" playsinline muted></video>
+        <!-- playsinline を追加 -->
+        <video id="liveVideo" playsinline webkit-playsinline muted></video>
         <canvas id="liveCanvas"></canvas>
 
         <button id="startLiveBtn" disabled>撮影開始</button>
@@ -240,7 +242,8 @@
         <input type="file" id="videoFileInput" accept="video/*" style="margin-top: 12px" />
         <button id="analyzeVideoBtn">動作を解析</button>
 
-        <video id="analysisVideo" controls></video>
+        <!-- playsinline を追加 -->
+        <video id="analysisVideo" controls playsinline webkit-playsinline></video>
         <canvas id="analysisCanvas"></canvas>
 
         <div id="videoStatus"></div>
@@ -278,7 +281,7 @@
     </section>
   </div>
 
-  <!-- script.js 読み込み（通常スクリプト） -->
+  <!-- script.js 読み込み -->
   <script src="script.js"></script>
 </body>
 </html>
