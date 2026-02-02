@@ -775,19 +775,19 @@ document.getElementById("exerciseBox").style.display = "block";
 }
 
 /* ---------------------------------------------------------
-   PDFレポート生成（jsPDF）
+   PDFレポート生成（jsPDF + 日本語フォント）
 --------------------------------------------------------- */
 async function generatePdfReport() {
   const { jsPDF } = window.jspdf;
 
-  // ★ 最初の1回だけ doc を作る
+  // ★ 最初に doc を1回だけ作る（ここが重要）
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4"
   });
 
-  // ★ 日本語フォントを読み込む
+  // ★ 日本語フォントを読み込む（pdf-font.js）
   await loadJapaneseFont(doc);
   doc.setFont("NotoSansJP");
 
