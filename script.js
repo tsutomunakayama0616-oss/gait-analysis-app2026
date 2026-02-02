@@ -779,16 +779,17 @@ document.getElementById("exerciseBox").style.display = "block";
 --------------------------------------------------------- */
 async function generatePdfReport() {
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
 
-  // ★ 日本語フォントを読み込む（必須）
-  await loadJapaneseFont(doc);
-  doc.setFont("NotoSansJP");
+  // ★ 最初の1回だけ doc を作る
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4"
   });
+
+  // ★ 日本語フォントを読み込む
+  await loadJapaneseFont(doc);
+  doc.setFont("NotoSansJP");
 
   const marginLeft = 15;
   let cursorY = 20;
