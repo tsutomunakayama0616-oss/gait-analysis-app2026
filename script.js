@@ -717,22 +717,23 @@ async function analyzeVideo() {
 
     const exerciseContent = document.getElementById("exerciseContent");
 
-    if (recs.length === 0) {
-      exerciseContent.innerHTML =
-        "<p>大きな問題は見られませんでした。今の歩き方を続けていきましょう。</p>";
-    } else {
-      const grouped = {};
-      recs.forEach(r => {
-        if (!grouped[r.category]) grouped[r.category] = [];
-        grouped[r.category].push(r);
-      });
+if (recs.length === 0) {
+  exerciseContent.innerHTML =
+    "<p>大きな問題は見られませんでした。今の歩き方を続けていきましょう。</p>";
+} else {
+  const grouped = {};
+  recs.forEach(r => {
+    if (!grouped[r.category]) grouped[r.category] = [];
+    grouped[r.category].push(r);
+  });
 
-      exerciseContent.innerHTML = Object.keys(grouped)
-        .map(cat => `
-          <h4 style="margin-top:16px; font-weight:700;">${cat}</h4>
-          ${grouped[cat]
-            .map(
-              r => `
+  exerciseContent.innerHTML = Object.keys(grouped)
+    .map(cat => {
+      return `
+        <h4 style="margin-top:16px; font-weight:700;">${cat}</h4>
+        ${grouped[cat]
+          .map(r => {
+            return `
               <div style="margin-bottom:16px; display:flex; gap:12px; align-items:center;">
                 <img src="${getThumbnail(r.url)}"
                   style="width:120px; height:90px; border-radius:8px; object-fit:cover;">
@@ -743,14 +744,15 @@ async function analyzeVideo() {
                   </a>
                 </div>
               </div>
-            `
-            )
-            .join("")}
-        `)
-        .join("");
-    }
+            `;
+          })
+          .join("")}
+      `;
+    })
+    .join("");
+}
 
-    document.getElementById("exerciseBox").style.display = "block";
+document.getElementById("exerciseBox").style.display = "block";
 
     // ▼ PDF用に解析結果を保存
     lastAnalysisResult = {
