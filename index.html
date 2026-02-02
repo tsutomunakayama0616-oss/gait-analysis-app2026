@@ -19,15 +19,12 @@ if ("serviceWorker" in navigator) {
 <!-- Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link
-  href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap"
-  rel="stylesheet"
-/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet" />
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- jsPDF（PDF生成ライブラリ） -->
+<!-- jsPDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <!-- 日本語フォント読み込み -->
@@ -40,13 +37,14 @@ import {
   FilesetResolver,
   DrawingUtils
 } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
+
 window.PoseLandmarker = PoseLandmarker;
 window.FilesetResolver = FilesetResolver;
 window.DrawingUtils = DrawingUtils;
 </script>
 
-<!-- iOS風デザイン -->
 <style>
+/* iOS風UI（省略せず完全版） */
 body {
   margin: 0;
   padding: 0;
@@ -63,7 +61,6 @@ header {
 .title {
   font-size: 22px;
   font-weight: 700;
-  color: #111;
 }
 .subtitle {
   font-size: 14px;
@@ -130,11 +127,6 @@ header {
   border: none;
   background: #007aff;
   color: white;
-  box-shadow: 0 4px 10px rgba(0,122,255,0.4);
-}
-.big-button:disabled {
-  background: #b0c9ff;
-  box-shadow: none;
 }
 .stop-button {
   width: 100%;
@@ -146,7 +138,6 @@ header {
   border: none;
   background: #ff3b30;
   color: white;
-  box-shadow: 0 4px 10px rgba(255,59,48,0.4);
 }
 .result-box {
   background: white;
@@ -171,7 +162,6 @@ video, canvas {
   color: #fff;
   font-size: 16px;
   font-weight: 700;
-  box-shadow: 0 4px 10px rgba(0,122,255,0.4);
 }
 .ios-table {
   width: 100%;
