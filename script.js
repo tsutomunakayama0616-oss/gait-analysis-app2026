@@ -695,25 +695,27 @@ async function analyzeVideo() {
         grouped[r.category].push(r);
       });
 
+      // ★ 完全修正版（テンプレート文字列の破綻を修正）
       exerciseContent.innerHTML = Object.keys(grouped)
-  .map(cat => `
-    <h4 style="margin-top:16px; font-weight:700;">${cat}</h4>
-    ${grouped[cat]
-      .map(r => `
-        <div style="margin-bottom:16px; display:flex; gap:12px; align-items:center;">
-          <img src="${getThumbnail(r.url)}"
-            style="width:120px; height:90px; border-radius:8px; object-fit:cover;">
-          <div>
-            <div>${r.name}</div>
-            <a class="exercise-link" href="${r.url}" target="_blank" rel="noopener noreferrer">
-              動画を見る（YouTube）
-            </a>
-          </div>
-        </div>
-      `)
-      .join("")}
-  `)
-  .join("");
+        .map(cat => `
+          <h4 style="margin-top:16px; font-weight:700;">${cat}</h4>
+          ${grouped[cat]
+            .map(r => `
+              <div style="margin-bottom:16px; display:flex; gap:12px; align-items:center;">
+                <img src="${getThumbnail(r.url)}"
+                  style="width:120px; height:90px; border-radius:8px; object-fit:cover;">
+                <div>
+                  <div>${r.name}</div>
+                  <a class="exercise-link" href="${r.url}" target="_blank" rel="noopener noreferrer">
+                    動画を見る（YouTube）
+                  </a>
+                </div>
+              </div>
+            `)
+            .join("")}
+        `)
+        .join("");
+    }
 
     document.getElementById("exerciseBox").style.display = "block";
 
@@ -743,14 +745,12 @@ async function analyzeVideo() {
 async function generatePdfReport() {
   const { jsPDF } = window.jspdf;
 
-  // ★ doc は1回だけ作る（重要）
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4"
   });
 
-  // ★ 日本語フォント読み込み（pdf-font.js）
   await loadJapaneseFont(doc);
   doc.setFont("NotoSansJP");
 
@@ -873,7 +873,7 @@ document.getElementById("videoFileInput").addEventListener("change", (e) => {
 });
 
 /* ---------------------------------------------------------
-   カメラ停止＋録画停止
+   カメラ停止＋録画停止（誤記 livestream → liveStream 修正済み）
 --------------------------------------------------------- */
 document.getElementById("stopLiveBtn").addEventListener("click", () => {
   if (liveAnimationId) {
