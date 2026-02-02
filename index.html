@@ -2,378 +2,82 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>歩行解析アプリ</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>歩行解析アプリ 2026</title>
 
   <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("service-worker.js");
-      });
-    }
-  </script>
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
 
-  <!-- フォント -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap"
-    rel="stylesheet"
-  />
-
-  <!-- Chart.js -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <!-- jsPDF（PDF生成） -->
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-
-  <!-- MediaPipe PoseLandmarker -->
-  <script type="module">
-    import {
-      PoseLandmarker,
-      FilesetResolver,
-      DrawingUtils
-    } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
-
-    window.PoseLandmarker = PoseLandmarker;
-    window.FilesetResolver = FilesetResolver;
-    window.DrawingUtils = DrawingUtils;
-  </script>
-
-  <!-- iOS風デザイン -->
   <style>
     body {
+      font-family: sans-serif;
       margin: 0;
       padding: 0;
-      font-family: "Noto Sans JP", sans-serif;
-      background: #f2f2f7;
-      color: #1c1c1e;
+      background: #f5f5f5;
     }
     header {
-      text-align: center;
-      padding: 20px 10px;
-      background: white;
-      border-bottom: 1px solid #e5e5ea;
-    }
-    .title {
-      font-size: 22px;
-      font-weight: 700;
-      color: #111;
-    }
-    .subtitle {
-      font-size: 14px;
-      margin-top: 4px;
-      color: #666;
-    }
-    .container {
-      width: 100%;
-      max-width: 480px;
-      margin: auto;
-      padding: 14px;
-    }
-
-    /* 2段UI */
-    .mode-switch-top {
-      margin-bottom: 8px;
-    }
-    .mode-switch {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 8px;
-    }
-    .mode-button {
-      flex: 1;
+      background: #1976d2;
+      color: white;
       padding: 12px;
-      font-size: 15px;
-      border-radius: 10px;
-      border: none;
-      background: #e5e5ea;
-      color: #333;
-      font-weight: 600;
+      text-align: center;
+      font-size: 20px;
     }
-    .mode-button.active {
-      background: #007aff;
-      color: white;
-    }
-
-    .section { display: none; }
-    .section.active { display: block; }
-
-    .card {
-      background: white;
+    main {
       padding: 16px;
-      border-radius: 14px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-      margin-bottom: 16px;
-      position: relative;
     }
-
-    /* REC表示 */
-    #recIndicator {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: rgba(0,0,0,0.6);
-      color: white;
-      padding: 6px 10px;
-      border-radius: 20px;
-      font-size: 14px;
-      font-weight: 700;
-      display: none;
-    }
-
-    /* 大きなボタン */
-    .big-button {
-      width: 100%;
-      padding: 16px;
-      margin-top: 12px;
-      font-size: 18px;
-      font-weight: 700;
-      border-radius: 12px;
-      border: none;
-      background: #007aff;
-      color: white;
-      box-shadow: 0 4px 10px rgba(0,122,255,0.4);
-    }
-    .big-button:disabled {
-      background: #b0c9ff;
-      box-shadow: none;
-    }
-    .stop-button {
-      width: 100%;
-      padding: 16px;
-      margin-top: 12px;
-      font-size: 18px;
-      font-weight: 700;
-      border-radius: 12px;
-      border: none;
-      background: #ff3b30;
-      color: white;
-      box-shadow: 0 4px 10px rgba(255,59,48,0.4);
-    }
-
-    /* iOSカード */
-    .result-box {
-      background: white;
-      padding: 16px;
-      border-radius: 14px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-      margin-top: 20px;
-      font-size: 15px;
-    }
-
     video, canvas {
       width: 100%;
-      border-radius: 12px;
-      margin-top: 12px;
+      max-width: 480px;
+      display: block;
+      margin: 12px auto;
+      background: #000;
     }
-
-    .primary-button {
-      width: 100%;
-      padding: 14px;
-      margin-top: 12px;
-      border-radius: 12px;
-      border: none;
-      background: #007aff;
-      color: #fff;
+    button {
+      width: 90%;
+      max-width: 300px;
+      padding: 12px;
+      margin: 10px auto;
+      display: block;
       font-size: 16px;
-      font-weight: 700;
-      box-shadow: 0 4px 10px rgba(0,122,255,0.4);
-    }
-
-    .ios-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    .ios-table th, .ios-table td {
-      padding: 10px;
-      border-bottom: 1px solid #e5e5ea;
-      text-align: left;
-    }
-    .ios-table th {
-      background: #f9f9fb;
-      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      background: #1976d2;
+      color: white;
     }
   </style>
 </head>
 
 <body>
-<header>
-  <div class="title">歩行解析アプリ</div>
-  <div class="subtitle">今日の歩き方をチェックしてみましょう</div>
-</header>
+  <header>歩行解析アプリ 2026</header>
 
-<div class="container">
+  <main>
+    <video id="video" playsinline></video>
+    <canvas id="analysisCanvas"></canvas>
 
-  <!-- 上段：使用方法 -->
-  <div class="mode-switch-top">
-    <button id="usageModeBtn" class="mode-button active">📘 アプリの使用方法</button>
-  </div>
+    <button id="startCameraBtn">カメラを開始</button>
+    <button id="analyzeBtn">歩行を解析</button>
+    <button id="pdfBtn">PDFレポートを作成</button>
+  </main>
 
-  <!-- 下段：撮影補助＋動作解析 -->
-  <div class="mode-switch">
-    <button id="liveModeBtn" class="mode-button">📸 撮影補助</button>
-    <button id="videoModeBtn" class="mode-button">🎥 動作解析</button>
-  </div>
+  <!-- jsPDF（PDF生成ライブラリ） -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-  <!-- 使用方法 -->
-  <section id="usageSection" class="section active">
-    <div class="card">
-      <h2>📘 アプリの使用方法</h2>
+  <!-- 日本語フォント読み込み -->
+  <script src="pdf-font.js"></script>
 
-      <div class="result-box">
-        <h3>アプリの目的</h3>
-        <p>後ろから撮影した歩行動画をもとに、骨盤の傾き・足の動き・左右のバランス・歩く速さなどを推定し、歩き方の特徴をわかりやすく見えるようにします。</p>
-      </div>
+  <!-- PDFレポート生成 -->
+  <script src="pdf-generator.js"></script>
 
-      <div class="result-box">
-        <h3>撮影環境のポイント</h3>
-        <ul>
-          <li>歩行路は <strong>5〜8メートル</strong></li>
-          <li>明るい場所で撮影（逆光は避ける）</li>
-          <li>背景はシンプルに（人が横切らない）</li>
-        </ul>
-      </div>
+  <!-- メイン処理（カメラ・解析） -->
+  <script src="script.js"></script>
 
-      <div class="result-box">
-        <h3>カメラ位置</h3>
-        <ul>
-          <li><strong>からだの真後ろ</strong>から撮影</li>
-          <li>カメラの高さは <strong>腰〜胸の高さ（90〜120cm）</strong></li>
-          <li>からだとの距離は <strong>3〜5メートル</strong></li>
-        </ul>
-      </div>
-
-      <div class="result-box">
-        <h3>服装</h3>
-        <ul>
-          <li>膝や股関節の動きが見える服装</li>
-          <li>スカート・長いコートは避ける</li>
-        </ul>
-      </div>
-
-      <div class="result-box">
-        <h3>撮影手順</h3>
-        <ol>
-          <li>歩行路の端に立ってもらう</li>
-          <li>カメラを後ろから構える</li>
-          <li>歩き始めたら録画開始</li>
-          <li>歩行の中央〜終わりまで撮影</li>
-        </ol>
-      </div>
-
-      <div class="result-box">
-        <h3>よくある失敗と対策</h3>
-        <ul>
-          <li>全身が映らない → カメラを少し離す</li>
-          <li>逆光で暗い → カメラの向きを変える</li>
-          <li>斜め後ろから撮影 → 真後ろに立つ</li>
-        </ul>
-      </div>
-
-      <div class="result-box">
-        <h3>注意点</h3>
-        <p>このアプリは診断を行うものではありません。歩き方の変化を確認するための参考情報としてご利用ください。</p>
-      </div>
-    </div>
-  </section>
-
-  <!-- 撮影補助 -->
-  <section id="liveSection" class="section">
-    <div class="card">
-      <h2>📸 撮影補助モード</h2>
-
-      <div id="recIndicator">● REC</div>
-
-      <div class="result-box">
-        <p>撮影前に以下を確認してください。</p>
-        <ul>
-          <li><label><input type="checkbox" class="precheck"> 後ろから撮影している</label></li>
-          <li><label><input type="checkbox" class="precheck"> 全身が画面に入っている</label></li>
-          <li><label><input type="checkbox" class="precheck"> 普段どおりの速さで歩いている</label></li>
-        </ul>
-      </div>
-
-      <video id="liveVideo" playsinline muted></video>
-      <canvas id="liveCanvas"></canvas>
-
-      <button id="startLiveBtn" class="big-button" disabled>撮影開始</button>
-      <button id="stopLiveBtn" class="stop-button">カメラ停止</button>
-
-      <div id="liveStatus"></div>
-      <div id="liveError" style="color:red;"></div>
-    </div>
-  </section>
-
-  <!-- 動作解析 -->
-  <section id="videoSection" class="section">
-    <div class="card">
-      <h2>🎥 動作解析モード</h2>
-
-      <label>手術日：</label>
-      <input type="date" id="surgeryDate" style="width:100%; margin-top:6px;">
-      <div id="surgeryDiffText" style="margin-top:6px; color:#555;"></div>
-
-      <input type="file" id="videoFileInput" accept="video/*" style="margin-top:12px;">
-
-      <button id="analyzeVideoBtn" class="primary-button">動作を解析する</button>
-
-      <video id="analysisVideo" controls playsinline muted></video>
-      <canvas id="analysisCanvas"></canvas>
-
-      <div id="videoStatus"></div>
-      <div id="videoError" style="color:red;"></div>
-
-      <!-- 解析結果 -->
-      <div id="resultBox" class="result-box" style="display:none;">
-        <h3>① 歩き方の結果（左右別）</h3>
-        <div id="pelvisResult"></div>
-        <div id="hipAbductionResult"></div>
-        <div id="hipAdductionResult"></div>
-        <div id="speedResult"></div>
-        <div id="symmetryResult"></div>
-      </div>
-
-      <!-- 歩行タイプ診断 -->
-      <div id="typeBox" class="result-box" style="display:none;">
-        <h3>② あなたの歩き方の特徴</h3>
-        <div id="typeContent"></div>
-      </div>
-
-      <!-- おすすめエクササイズ -->
-      <div id="exerciseBox" class="result-box" style="display:none;">
-        <h3>③ あなたにおすすめのセルフエクササイズ</h3>
-        <div id="exerciseContent"></div>
-      </div>
-
-      <!-- PDFレポート作成ボタン -->
-      <button id="pdfReportBtn" class="primary-button" style="margin-top:12px;">
-        PDFレポートを作成
-      </button>
-
-      <h3 style="margin-top:20px;">回復の変化を比べる</h3>
-      <table id="resultTable" class="ios-table">
-        <thead>
-          <tr>
-            <th>条件</th>
-            <th>骨盤傾き</th>
-            <th>外転</th>
-            <th>内転</th>
-            <th>速度（%）</th>
-          </tr>
-        </thead>
-        <tbody></tbody>
-      </table>
-
-      <canvas id="compareChart" style="margin-top:16px;"></canvas>
-    </div>
-  </section>
-
-</div>
-
-<script src="script.js"></script>
+  <!-- PWA Service Worker -->
+  <script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("service-worker.js");
+    }
+  </script>
 </body>
 </html>
