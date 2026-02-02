@@ -3,9 +3,11 @@
 --------------------------------------------------------- */
 let poseLandmarker = null;
 let runningMode = "IMAGE";
+
 let liveStream = null;
 let liveAnimationId = null;
 let videoAnimationId = null;
+
 let compareChart = null;
 
 const historyLabels = [];
@@ -16,6 +18,7 @@ const historySpeed = [];
 
 let previousStability = null;
 let previousSymmetry = null;
+
 let loadedVideoURL = null;
 
 // 録画用
@@ -46,13 +49,17 @@ const exerciseList = [
   { id:2, category:"ストレッチ", name:"太ももの前を伸ばすストレッチ", url:"https://youtu.be/lVpF9TiepLg" },
   { id:3, category:"ストレッチ", name:"股関節の前を伸ばすストレッチ", url:"https://youtu.be/XIA80pBZ3ws" },
   { id:4, category:"ストレッチ", name:"内ももを伸ばすストレッチ", url:"https://youtu.be/racb4M_hycM" },
+
   { id:7, category:"筋力トレーニング（おしり）", name:"おしりの筋肉を意識して力を入れる運動", url:"https://youtu.be/4ckJ67_8IB8" },
   { id:8, category:"筋力トレーニング（おしり）", name:"おしりの筋肉を使ったブリッジ運動", url:"https://youtu.be/9zKZ-YRmU8I" },
   { id:9, category:"筋力トレーニング（おしり）", name:"立ったまま行うおしりの横の筋トレ", url:"https://youtu.be/aikGoCaTFFI" },
+
   { id:10, category:"筋力トレーニング（太もも）", name:"太ももの前の筋肉を目覚めさせる運動", url:"https://youtu.be/rweyU-3O3zo" },
   { id:11, category:"筋力トレーニング（太もも）", name:"足を持ち上げる運動（SLR）", url:"https://youtu.be/fNM6w_RnVRk" },
+
   { id:14, category:"バランス練習", name:"前後に足を並べて立つバランス練習", url:"https://youtu.be/F0OVS9LT1w4" },
   { id:15, category:"バランス練習", name:"片脚立ちのバランス練習", url:"https://youtu.be/HUjoGJtiknc" },
+
   { id:16, category:"有酸素運動", name:"ウォーキング", url:"https://youtu.be/Cs4NOzgkS8s" },
   { id:17, category:"有酸素運動", name:"自転車こぎの運動", url:"https://youtu.be/12_J_pr-MUE" },
   { id:18, category:"有酸素運動", name:"水の中での運動", url:"https://youtu.be/xqj3dn9mw50" }
@@ -79,6 +86,7 @@ function saveHistory() {
     previousStability,
     previousSymmetry
   };
+
   try {
     localStorage.setItem("gaitHistoryV1", JSON.stringify(data));
   } catch (e) {
@@ -167,6 +175,7 @@ document.getElementById("surgeryDate").addEventListener("change", () => {
   }
 
   const diffDays = Math.floor((today - inputDate) / (1000 * 60 * 60 * 24));
+
   const text =
     diffDays >= 0
       ? `手術後 ${diffDays}日`
@@ -212,6 +221,7 @@ document.getElementById("videoModeBtn").addEventListener("click", () => {
    撮影補助モード：チェックリスト
 --------------------------------------------------------- */
 const prechecks = document.querySelectorAll(".precheck");
+
 prechecks.forEach((chk) => {
   chk.addEventListener("change", () => {
     const allChecked = [...prechecks].every((c) => c.checked);
@@ -275,7 +285,6 @@ document.getElementById("startLiveBtn").addEventListener("click", async () => {
 
     document.getElementById("liveStatus").textContent =
       "カメラ起動中（録画中）…";
-
     document.getElementById("recIndicator").style.display = "inline-block";
 
     const drawingUtils = new window.DrawingUtils(ctx);
@@ -318,6 +327,7 @@ document.getElementById("startLiveBtn").addEventListener("click", async () => {
 
       if (result && result.landmarks && result.landmarks.length > 0) {
         const lm = result.landmarks[0];
+
         drawingUtils.drawLandmarks(lm, { radius: 3, color: "#ff3b30" });
         drawingUtils.drawConnectors(
           lm,
@@ -337,48 +347,6 @@ document.getElementById("startLiveBtn").addEventListener("click", async () => {
     document.getElementById("liveError").textContent =
       "カメラを起動できませんでした。";
   }
-});
-
-/* ---------------------------------------------------------
-   カメラ停止＋録画停止
---------------------------------------------------------- */
-document.getElementById("stopLiveBtn").addEventListener("click", () => {
-  if (liveAnimationId) {
-    cancelAnimationFrame(liveAnimationId);
-    liveAnimationId = null;
-  }
-
-  if (liveStream) {
-    liveStream.getTracks().forEach((t) => t.stop());
-    liveStream = null;
-  }
-
-  if (mediaRecorder && mediaRecorder.state !== "inactive") {
-    mediaRecorder.stop();
-  }
-
-  document.getElementById("recIndicator").style.display = "none";
-  document.getElementById("liveStatus").textContent = "カメラ停止";
-});
-
-/* ---------------------------------------------------------
-   動画読み込み（スマホ内の動画）
---------------------------------------------------------- */
-document.getElementById("videoFileInput").addEventListener("change", (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  loadedVideoURL = URL.createObjectURL(file);
-  hasRecordedVideo = false;
-
-  const video = document.getElementById("analysisVideo");
-  video.setAttribute("playsinline", "");
-  video.setAttribute("webkit-playsinline", "");
-  video.muted = true;
-  video.src = loadedVideoURL;
-
-  document.getElementById("videoStatus").textContent =
-    "選択した動画が読み込まれました。「動作を解析する」を押してください。";
 });
 
 /* ---------------------------------------------------------
@@ -717,44 +685,44 @@ async function analyzeVideo() {
 
     const exerciseContent = document.getElementById("exerciseContent");
 
-if (recs.length === 0) {
-  exerciseContent.innerHTML =
-    "<p>大きな問題は見られませんでした。今の歩き方を続けていきましょう。</p>";
-} else {
-  const grouped = {};
-  recs.forEach(r => {
-    if (!grouped[r.category]) grouped[r.category] = [];
-    grouped[r.category].push(r);
-  });
+    if (recs.length === 0) {
+      exerciseContent.innerHTML =
+        "<p>大きな問題は見られませんでした。今の歩き方を続けていきましょう。</p>";
+    } else {
+      const grouped = {};
+      recs.forEach(r => {
+        if (!grouped[r.category]) grouped[r.category] = [];
+        grouped[r.category].push(r);
+      });
 
-  exerciseContent.innerHTML = Object.keys(grouped)
-    .map(cat => {
-      return `
-        <h4 style="margin-top:16px; font-weight:700;">${cat}</h4>
-        ${grouped[cat]
-          .map(r => {
-            return `
-              <div style="margin-bottom:16px; display:flex; gap:12px; align-items:center;">
-                <img src="${getThumbnail(r.url)}"
-                  style="width:120px; height:90px; border-radius:8px; object-fit:cover;">
-                <div>
-                  <div>${r.name}</div>
-                  <a class="exercise-link" href="${r.url}" target="_blank" rel="noopener noreferrer">
-                    動画を見る（YouTube）
-                  </a>
-                </div>
-              </div>
-            `;
-          })
-          .join("")}
-      `;
-    })
-    .join("");
-}
+      exerciseContent.innerHTML = Object.keys(grouped)
+        .map(cat => {
+          return `
+            <h4 style="margin-top:16px; font-weight:700;">${cat}</h4>
+            ${grouped[cat]
+              .map(r => {
+                return `
+                  <div style="margin-bottom:16px; display:flex; gap:12px; align-items:center;">
+                    <img src="${getThumbnail(r.url)}"
+                      style="width:120px; height:90px; border-radius:8px; object-fit:cover;">
+                    <div>
+                      <div>${r.name}</div>
+                      <a class="exercise-link" href="${r.url}" target="_blank" rel="noopener noreferrer">
+                        動画を見る（YouTube）
+                      </a>
+                    </div>
+                  </div>
+                `;
+              })
+              .join("")}
+          `;
+        })
+        .join("");
+    }
 
-document.getElementById("exerciseBox").style.display = "block";
+    document.getElementById("exerciseBox").style.display = "block";
 
-    // ▼ PDF用に解析結果を保存
+    // PDF用に解析結果を保存
     lastAnalysisResult = {
       pelvisR: maxPelvisTiltRight,
       pelvisL: maxPelvisTiltLeft,
@@ -780,14 +748,14 @@ document.getElementById("exerciseBox").style.display = "block";
 async function generatePdfReport() {
   const { jsPDF } = window.jspdf;
 
-  // ★ 最初に doc を1回だけ作る（ここが重要）
+  // ★ doc は1回だけ作る（重要）
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
     format: "a4"
   });
 
-  // ★ 日本語フォントを読み込む（pdf-font.js）
+  // ★ 日本語フォント読み込み（pdf-font.js）
   await loadJapaneseFont(doc);
   doc.setFont("NotoSansJP");
 
@@ -887,6 +855,48 @@ document.getElementById("pdfReportBtn").addEventListener("click", () => {
 --------------------------------------------------------- */
 document.getElementById("analyzeVideoBtn").addEventListener("click", () => {
   analyzeVideo();
+});
+
+/* ---------------------------------------------------------
+   動画読み込み（スマホ内の動画）
+--------------------------------------------------------- */
+document.getElementById("videoFileInput").addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  loadedVideoURL = URL.createObjectURL(file);
+  hasRecordedVideo = false;
+
+  const video = document.getElementById("analysisVideo");
+  video.setAttribute("playsinline", "");
+  video.setAttribute("webkit-playsinline", "");
+  video.muted = true;
+  video.src = loadedVideoURL;
+
+  document.getElementById("videoStatus").textContent =
+    "選択した動画が読み込まれました。「動作を解析する」を押してください。";
+});
+
+/* ---------------------------------------------------------
+   カメラ停止＋録画停止
+--------------------------------------------------------- */
+document.getElementById("stopLiveBtn").addEventListener("click", () => {
+  if (liveAnimationId) {
+    cancelAnimationFrame(liveAnimationId);
+    liveAnimationId = null;
+  }
+
+  if (liveStream) {
+    liveStream.getTracks().forEach((t) => t.stop());
+    liveStream = null;
+  }
+
+  if (mediaRecorder && mediaRecorder.state !== "inactive") {
+    mediaRecorder.stop();
+  }
+
+  document.getElementById("recIndicator").style.display = "none";
+  document.getElementById("liveStatus").textContent = "カメラ停止";
 });
 
 /* ---------------------------------------------------------
