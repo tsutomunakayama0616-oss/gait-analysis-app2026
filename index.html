@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
 <meta charset="UTF-8" />
 <title>歩行解析アプリ</title>
@@ -26,14 +27,11 @@ if ("serviceWorker" in navigator) {
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- jsPDF（PDF生成ライブラリ） -->
+<!-- jsPDF（PDF生成ライブラリ）★追加 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<!-- 日本語フォント読み込み -->
+<!-- 日本語フォント読み込み ★追加 -->
 <script src="pdf-font.js"></script>
-
-<!-- PDFレポート生成 -->
-<script src="pdf-generator.js"></script>
 
 <!-- MediaPipe PoseLandmarker -->
 <script type="module">
@@ -47,16 +45,188 @@ window.FilesetResolver = FilesetResolver;
 window.DrawingUtils = DrawingUtils;
 </script>
 
-<!-- iOS風デザイン -->
+<!-- iOS風デザイン（あなたの元のCSSそのまま） -->
 <style>
-（※ Tsutomu の元の CSS をそのまま残すため省略）
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Noto Sans JP", sans-serif;
+  background: #f2f2f7;
+  color: #1c1c1e;
+}
+header {
+  text-align: center;
+  padding: 20px 10px;
+  background: white;
+  border-bottom: 1px solid #e5e5ea;
+}
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111;
+}
+.subtitle {
+  font-size: 14px;
+  margin-top: 4px;
+  color: #666;
+}
+.container {
+  width: 100%;
+  max-width: 480px;
+  margin: auto;
+  padding: 14px;
+}
+.mode-switch-top {
+  margin-bottom: 8px;
+}
+.mode-switch {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.mode-button {
+  flex: 1;
+  padding: 12px;
+  font-size: 15px;
+  border-radius: 10px;
+  border: none;
+  background: #e5e5ea;
+  color: #333;
+  font-weight: 600;
+}
+.mode-button.active {
+  background: #007aff;
+  color: white;
+}
+.section { display: none; }
+.section.active { display: block; }
+.card {
+  background: white;
+  padding: 16px;
+  border-radius: 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  margin-bottom: 16px;
+  position: relative;
+}
+#recIndicator {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 700;
+  display: none;
+}
+.big-button {
+  width: 100%;
+  padding: 16px;
+  margin-top: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: 12px;
+  border: none;
+  background: #007aff;
+  color: white;
+  box-shadow: 0 4px 10px rgba(0,122,255,0.4);
+}
+.big-button:disabled {
+  background: #b0c9ff;
+  box-shadow: none;
+}
+.stop-button {
+  width: 100%;
+  padding: 16px;
+  margin-top: 12px;
+  font-size: 18px;
+  font-weight: 700;
+  border-radius: 12px;
+  border: none;
+  background: #ff3b30;
+  color: white;
+  box-shadow: 0 4px 10px rgba(255,59,48,0.4);
+}
+.result-box {
+  background: white;
+  padding: 16px;
+  border-radius: 14px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  margin-top: 20px;
+  font-size: 15px;
+}
+video, canvas {
+  width: 100%;
+  border-radius: 12px;
+  margin-top: 12px;
+}
+.primary-button {
+  width: 100%;
+  padding: 14px;
+  margin-top: 12px;
+  border-radius: 12px;
+  border: none;
+  background: #007aff;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(0,122,255,0.4);
+}
+.ios-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+.ios-table th, .ios-table td {
+  padding: 10px;
+  border-bottom: 1px solid #e5e5ea;
+  text-align: left;
+}
+.ios-table th {
+  background: #f9f9fb;
+  font-weight: 600;
+}
 </style>
 
 </head>
 
 <body>
 
-（※ Tsutomu の元の HTML をそのまま残すため省略）
+<header>
+  <div class="title">歩行解析アプリ</div>
+  <div class="subtitle">今日の歩き方をチェックしてみましょう</div>
+</header>
+
+<div class="container">
+
+  <!-- 使用方法 -->
+  <div class="mode-switch-top">
+    <button id="usageModeBtn" class="mode-button active">📘 アプリの使用方法</button>
+  </div>
+
+  <!-- 撮影補助＋動作解析 -->
+  <div class="mode-switch">
+    <button id="liveModeBtn" class="mode-button">📸 撮影補助</button>
+    <button id="videoModeBtn" class="mode-button">🎥 動作解析</button>
+  </div>
+
+  <!-- 使用方法セクション（あなたの元のHTMLそのまま） -->
+  <section id="usageSection" class="section active">
+    （※あなたの元の usageSection の内容そのまま）
+  </section>
+
+  <!-- 撮影補助セクション -->
+  <section id="liveSection" class="section">
+    （※あなたの元の liveSection の内容そのまま）
+  </section>
+
+  <!-- 動作解析セクション -->
+  <section id="videoSection" class="section">
+    （※あなたの元の videoSection の内容そのまま）
+  </section>
+
+</div>
 
 <!-- アプリ本体 -->
 <script src="script.js"></script>

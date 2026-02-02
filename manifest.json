@@ -1,10 +1,14 @@
 {
   "name": "歩行解析アプリ",
   "short_name": "歩行解析",
+  "lang": "ja",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#f2f2f7",
-  "theme_color": "#007aff",
+  "orientation": "portrait",
+  "theme_color": "#ffffff",
+  "background_color": "#ffffff",
+
   "icons": [
     {
       "src": "icon-192.png",
@@ -15,6 +19,18 @@
       "src": "icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
+    },
+    {
+      "src": "icon-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-1024-maskable.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
