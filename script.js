@@ -343,6 +343,123 @@ document.getElementById("startLiveBtn").addEventListener("click", async () => {
 });
 
 /* ---------------------------------------------------------
+   動作解析（左右別解析）前半
+--------------------------------------------------------- */
+let maxPelvisTiltRight = 0;
+let maxPelvisTiltLeft = 0;
+let maxHipAbductionRight = 0;
+let maxHipAbductionLeft = 0;
+let maxHipAdductionRight = 0;
+let maxHipAdductionLeft = 0;
+
+let firstFrameTime = null;
+let lastFrameTime = null;
+let firstFootX = null;
+let lastFootX = null;
+
+function analyzeVideo() {
+  const video = document.getElementById("analysisVideo");
+  const canvas = document.getElementById("analysisCanvas");
+  const ctx = canvas.getContext("2d");
+
+  if (!loadedVideoURL) {
+    document.getElementById("videoError").textContent =
+      "動画が読み込まれていません。";
+    return;
+  }
+
+  document.getElementById("videoError").textContent = "";
+  document.getElementById("videoStatus").textContent = "解析中…";
+
+  video.pause();
+  video.currentTime = 0;
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  maxPelvisTiltRight = 0;
+  maxPelvisTiltLeft = 0;
+  maxHipAbductionRight = 0;
+  maxHipAbductionLeft = 0;
+  maxHipAdductionRight = 0;
+  maxHipAdductionLeft = 0;
+
+  firstFrameTime = null;
+  lastFrameTime = null;
+  firstFootX = null;
+  lastFootX = null;
+
+  async function processFrame() {
+    if (!poseLandmarker) {
+      document.getElementById("videoError").textContent =
+        "骨格モデルの読み込みに失敗しました。";
+      return;
+    }
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    const nowInMs = performance.now();
+    const result = poseLandmarker.detectForVideo(video, nowInMs);
+
+    if (result && result.landmarks && result.landmarks.length > 0) {
+      const lm = result.landmarks[0];
+
+      const pelvisR = angleDeg(
+        lm[24].x, lm[24].y,
+        lm[23].x, lm[23].y,
+        lm[12].x, lm[12].y
+      );
+      const pelvisL = angleDeg(
+        lm[23].x, lm[23].y,
+        lm[24].x, lm[24].y,
+        lm[11].x, lm[11].y
+      );
+
+      maxPelvisTiltRight = Math.max(maxPelvisTiltRight, pelvisR);
+      maxPelvisTiltLeft = Math.max(maxPelvisTiltLeft, pelvisL);
+
+      const abdR = angleDeg(
+        lm[26].x, lm[26].y,
+        lm[24].x, lm[24].y,
+        lm[12].x, lm[12].y
+      );
+      const abdL = angleDeg(
+        lm[25].x, lm[25].y,
+        lm[23].x, lm[23].y,
+        lm[11].x, lm[11].y
+      );
+
+      maxHipAbductionRight = Math.max(maxHipAbductionRight, abdR);
+      maxHipAbductionLeft = Math.max(maxHipAbductionLeft, abdL);
+
+      const addR = 180 - abdR;
+      const addL = 180 - abdL;
+
+      maxHipAdductionRight = Math.max(maxHipAdductionRight, addR);
+      maxHipAdductionLeft = Math.max(maxHipAdductionLeft, addL);
+
+      if (firstFrameTime === null) {
+        firstFrameTime = nowInMs;
+        firstFootX = lm[28].x;
+      }
+
+      lastFrameTime = nowInMs;
+      lastFootX = lm[28].x;
+    }
+
+    if (!video.paused && !video.ended) {
+      videoAnimationId = requestAnimationFrame(processFrame);
+    } else {
+      finishAnalysis();
+    }
+  }
+
+  video.play();
+  processFrame();
+}
+
+/* ---------------------------------------------------------
    グラフ更新（Chart.js）
 --------------------------------------------------------- */
 function updateCompareChart() {
