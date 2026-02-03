@@ -523,7 +523,6 @@ function finishAnalysis() {
 
   /* ---------------------------------------------------------
      ★ エクササイズ一覧（完全修正版）
-     ※111 の壊れていた部分を安全なテンプレート構造に修正
   --------------------------------------------------------- */
   const recs = recommendExercises(
     maxPelvisTiltRight, maxPelvisTiltLeft,
@@ -588,7 +587,7 @@ function finishAnalysis() {
 }
 
 /* ---------------------------------------------------------
-   PDFレポート生成（jsPDF + 日本語フォント）※111 の最新版
+   PDFレポート生成（jsPDF + 日本語フォント）
 --------------------------------------------------------- */
 async function generatePdfReport() {
   const { jsPDF } = window.jspdf;
