@@ -3,7 +3,7 @@
   "name": "歩行解析アプリ 2026",
   "short_name": "歩行解析",
   "lang": "ja",
-  "start_url": "./index.html?v=5",
+  "start_url": "./index.html?v=7",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
@@ -20,4 +20,5 @@
       "type": "image/png"
     }
   ]
+
 }
