@@ -129,44 +129,30 @@ function loadHistory() {
 }
 
 /* ---------------------------------------------------------
-   MediaPipe PoseLandmarker 初期化（完全修正版）
-   Safari / iPhone / PWA でも確実に動く安定版
+   MediaPipe PoseLandmarker 初期化（444 の動作版）
 --------------------------------------------------------- */
 async function initPoseLandmarker() {
-  // すでに初期化済みなら何もしない
   if (poseLandmarker) return;
 
-  try {
-    // vision_bundle.js が読み込まれているか確認
-    if (typeof FilesetResolver === "undefined" ||
-        typeof PoseLandmarker === "undefined" ||
-        typeof DrawingUtils === "undefined") {
-      console.error("MediaPipe の読み込みがまだ完了していません。");
-      return;
-    }
-
-    // WASM ディレクトリを指定（正しいパス）
-    const vision = await FilesetResolver.forVisionTasks(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
-    );
-
-    // PoseLandmarker 初期化
-    poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
-      baseOptions: {
-        modelAssetPath:
-          "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task"
-      },
-      runningMode: "VIDEO",
-      numPoses: 1
-    });
-
-    runningMode = "VIDEO";
-    console.log("PoseLandmarker 初期化完了");
-
-  } catch (e) {
-    console.error("PoseLandmarker 初期化エラー:", e);
-    poseLandmarker = null;
+  if (!window.FilesetResolver || !window.PoseLandmarker || !window.DrawingUtils) {
+    console.error("MediaPipe がまだ読み込まれていません。");
+    return;
   }
+
+  const vision = await window.FilesetResolver.forVisionTasks(
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+  );
+
+  poseLandmarker = await window.PoseLandmarker.createFromOptions(vision, {
+    baseOptions: {
+      modelAssetPath:
+        "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task"
+    },
+    runningMode: "VIDEO",
+    numPoses: 1
+  });
+
+  runningMode = "VIDEO";
 }
 
 /* ---------------------------------------------------------
@@ -257,7 +243,7 @@ function angleDeg(ax, ay, bx, by, cx, cy) {
 }
 
 /* ---------------------------------------------------------
-   撮影補助モード：カメラ起動＋録画
+   撮影補助モード：カメラ起動＋録画（444 の安定動作版）
 --------------------------------------------------------- */
 document.getElementById("startLiveBtn").addEventListener("click", async () => {
   document.getElementById("liveError").textContent = "";
@@ -454,303 +440,155 @@ function recommendExercises(pelvisR, pelvisL, abdR, abdL, addR, addL, speedPerce
 }
 
 /* ---------------------------------------------------------
-   動作解析（左右別解析）
+   動作解析（左右別解析）後半
 --------------------------------------------------------- */
-async function analyzeVideo() {
-  if (!loadedVideoURL) {
-    document.getElementById("videoError").textContent =
-      "動画が選択されていません。撮影するか、動画を選択してください。";
-    return;
+function finishAnalysis() {
+  if (videoAnimationId) {
+    cancelAnimationFrame(videoAnimationId);
+    videoAnimationId = null;
   }
 
-  const analyzeBtn = document.getElementById("analyzeVideoBtn");
-  analyzeBtn.disabled = true;
+  let gaitSpeedRaw = 0;
 
-  document.getElementById("videoError").textContent = "";
-  document.getElementById("videoStatus").textContent = "解析中…";
-
-  await initPoseLandmarker();
-
-  if (!poseLandmarker) {
-    document.getElementById("videoError").textContent =
-      "骨格モデルの読み込みに失敗しました。";
-    analyzeBtn.disabled = false;
-    return;
+  if (
+    firstFrameTime !== null &&
+    lastFrameTime !== null &&
+    lastFrameTime > firstFrameTime &&
+    firstFootX !== null &&
+    lastFootX !== null
+  ) {
+    const dx = Math.abs(lastFootX - firstFootX);
+    const dt = lastFrameTime - firstFrameTime;
+    gaitSpeedRaw = dx / dt;
   }
 
-  const video = document.getElementById("analysisVideo");
-  const canvas = document.getElementById("analysisCanvas");
-  const ctx = canvas.getContext("2d");
-  const drawingUtils = new window.DrawingUtils(ctx);
+  const gaitSpeedPercent = gaitSpeedRaw * 100;
 
-  video.setAttribute("playsinline", "");
-  video.setAttribute("webkit-playsinline", "");
-  video.muted = true;
-  video.controls = false;
-  video.currentTime = 0;
+  document.getElementById("pelvisResult").innerHTML = `
+    <strong>骨盤の傾き</strong><br>
+    右：${maxPelvisTiltRight.toFixed(1)}°<br>
+    左：${maxPelvisTiltLeft.toFixed(1)}°
+  `;
 
-  await video.play();
+  document.getElementById("hipAbductionResult").innerHTML = `
+    <strong>外転角度（最大）</strong><br>
+    右：${maxHipAbductionRight.toFixed(1)}°<br>
+    左：${maxHipAbductionLeft.toFixed(1)}°
+  `;
 
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
+  document.getElementById("hipAdductionResult").innerHTML = `
+    <strong>内転角度（最大）</strong><br>
+    右：${maxHipAdductionRight.toFixed(1)}°<br>
+    左：${maxHipAdductionLeft.toFixed(1)}°
+  `;
 
-  // 左右別の最大値
-  let maxPelvisTiltRight = 0;
-  let maxPelvisTiltLeft = 0;
-  let maxHipAbductionRight = 0;
-  let maxHipAbductionLeft = 0;
-  let maxHipAdductionRight = 0;
-  let maxHipAdductionLeft = 0;
+  document.getElementById("speedResult").textContent =
+    `歩く速さ（相対速度）：${gaitSpeedPercent.toFixed(1)} %`;
 
-  let firstFrameTime = null;
-  let lastFrameTime = null;
-  let firstFootX = null;
-  let lastFootX = null;
+  const balanceRight = 100 - maxPelvisTiltRight;
+  const balanceLeft = 100 - maxPelvisTiltLeft;
 
-  const neutralHipAngle = 90;
+  document.getElementById("symmetryResult").innerHTML = `
+    <strong>左右のバランス</strong><br>
+    右：${balanceRight.toFixed(1)}<br>
+    左：${balanceLeft.toFixed(1)}
+  `;
 
-  function processFrame() {
-    if (video.paused || video.ended || video.currentTime >= video.duration) {
-      finishAnalysis();
-      return;
-    }
+  document.getElementById("resultBox").style.display = "block";
+  document.getElementById("videoStatus").textContent = "解析が完了しました。";
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const conditionLabel =
+    document.getElementById("surgeryDiffText").textContent || "条件未設定";
 
-    const nowInMs = performance.now();
-    const result = poseLandmarker.detectForVideo(video, nowInMs);
+  historyLabels.push(conditionLabel);
+  historyPelvis.push(Number(((maxPelvisTiltRight + maxPelvisTiltLeft) / 2).toFixed(1)));
+  historyHipAbd.push(Number(((maxHipAbductionRight + maxHipAbductionLeft) / 2).toFixed(1)));
+  historyHipAdd.push(Number(((maxHipAdductionRight + maxHipAdductionLeft) / 2).toFixed(1)));
+  historySpeed.push(Number(gaitSpeedPercent.toFixed(1)));
 
-    if (result && result.landmarks && result.landmarks.length > 0) {
-      const lm = result.landmarks[0];
+  updateCompareChart();
+  saveHistory();
 
-      drawingUtils.drawLandmarks(lm, { radius: 3, color: "#ff3b30" });
-      drawingUtils.drawConnectors(
-        lm,
-        window.PoseLandmarker.POSE_CONNECTIONS,
-        { color: "#007aff", lineWidth: 2 }
-      );
+  const types = diagnoseGait(
+    maxPelvisTiltRight, maxPelvisTiltLeft,
+    maxHipAbductionRight, maxHipAbductionLeft,
+    maxHipAdductionRight, maxHipAdductionLeft,
+    gaitSpeedPercent
+  );
 
-      // 右脚
-      const rightHip = lm[24];
-      const rightKnee = lm[26];
-      const rightAnkle = lm[28];
+  document.getElementById("typeContent").innerHTML =
+    `<ul>${types.map(t => `<li>${t}</li>`).join("")}</ul>`;
 
-      // 左脚
-      const leftHip = lm[23];
-      const leftKnee = lm[25];
-      const leftAnkle = lm[27];
+  document.getElementById("typeBox").style.display = "block";
 
-      // 骨盤中心
-      const pelvisCenter = {
-        x: (rightHip.x + leftHip.x) / 2,
-        y: (rightHip.y + leftHip.y) / 2
-      };
+  /* ---------------------------------------------------------
+     ★ エクササイズ一覧（完全修正版）
+     ※111 の壊れていた部分を安全なテンプレート構造に修正
+  --------------------------------------------------------- */
+  const recs = recommendExercises(
+    maxPelvisTiltRight, maxPelvisTiltLeft,
+    maxHipAbductionRight, maxHipAbductionLeft,
+    maxHipAdductionRight, maxHipAdductionLeft,
+    gaitSpeedPercent
+  );
 
-      // 骨盤の傾き
-      const pelvisTiltRight = Math.abs(rightHip.y - pelvisCenter.y);
-      const pelvisTiltLeft = Math.abs(leftHip.y - pelvisCenter.y);
+  const exerciseContent = document.getElementById("exerciseContent");
 
-      maxPelvisTiltRight = Math.max(maxPelvisTiltRight, pelvisTiltRight);
-      maxPelvisTiltLeft = Math.max(maxPelvisTiltLeft, pelvisTiltLeft);
+  if (recs.length === 0) {
+    exerciseContent.innerHTML =
+      "<p>大きな問題は見られませんでした。今の歩き方を続けていきましょう。</p>";
+  } else {
+    const grouped = {};
+    recs.forEach(r => {
+      if (!grouped[r.category]) grouped[r.category] = [];
+      grouped[r.category].push(r);
+    });
 
-      // 股関節角度（右）
-      const hipAngleRight = angleDeg(
-        rightKnee.x, rightKnee.y,
-        rightHip.x, rightHip.y,
-        pelvisCenter.x, pelvisCenter.y
-      );
-
-      // 股関節角度（左）
-      const hipAngleLeft = angleDeg(
-        leftKnee.x, leftKnee.y,
-        leftHip.x, leftHip.y,
-        pelvisCenter.x, pelvisCenter.y
-      );
-
-      // 外転・内転（右）
-      if (hipAngleRight >= neutralHipAngle) {
-        maxHipAbductionRight = Math.max(maxHipAbductionRight, hipAngleRight - neutralHipAngle);
-      } else {
-        maxHipAdductionRight = Math.max(maxHipAdductionRight, neutralHipAngle - hipAngleRight);
-      }
-
-      // 外転・内転（左）
-      if (hipAngleLeft >= neutralHipAngle) {
-        maxHipAbductionLeft = Math.max(maxHipAbductionLeft, hipAngleLeft - neutralHipAngle);
-      } else {
-        maxHipAdductionLeft = Math.max(maxHipAdductionLeft, neutralHipAngle - hipAngleLeft);
-      }
-
-      // 歩行速度
-      const currentTime = video.currentTime;
-      const currentFootX = rightAnkle.x;
-
-      if (firstFrameTime === null) {
-        firstFrameTime = currentTime;
-        firstFootX = currentFootX;
-      }
-
-      lastFrameTime = currentTime;
-      lastFootX = currentFootX;
-    }
-
-    ctx.restore();
-    videoAnimationId = requestAnimationFrame(processFrame);
+    exerciseContent.innerHTML = Object.keys(grouped)
+      .map(cat => {
+        return `
+          <h4 style="margin-top:16px; font-weight:700;">${cat}</h4>
+          ${grouped[cat]
+            .map(r => {
+              return `
+                <div style="margin-bottom:16px; display:flex; gap:12px; align-items:center;">
+                  <img src="${getThumbnail(r.url)}"
+                    style="width:120px; height:90px; border-radius:8px; object-fit:cover;">
+                  <div>
+                    <div>${r.name}</div>
+                    <a class="exercise-link" href="${r.url}" target="_blank" rel="noopener noreferrer">
+                      動画を見る（YouTube）
+                    </a>
+                  </div>
+                </div>
+              `;
+            })
+            .join("")}
+        `;
+      })
+      .join("");
   }
 
-  function finishAnalysis() {
-    if (videoAnimationId) {
-      cancelAnimationFrame(videoAnimationId);
-      videoAnimationId = null;
-    }
+  document.getElementById("exerciseBox").style.display = "block";
 
-    let gaitSpeedRaw = 0;
+  lastAnalysisResult = {
+    pelvisR: maxPelvisTiltRight,
+    pelvisL: maxPelvisTiltLeft,
+    abdR: maxHipAbductionRight,
+    abdL: maxHipAbductionLeft,
+    addR: maxHipAdductionRight,
+    addL: maxHipAdductionLeft,
+    speedPercent: gaitSpeedPercent,
+    types,
+    conditionLabel
+  };
 
-    if (
-      firstFrameTime !== null &&
-      lastFrameTime !== null &&
-      lastFrameTime > firstFrameTime &&
-      firstFootX !== null &&
-      lastFootX !== null
-    ) {
-      const dx = Math.abs(lastFootX - firstFootX);
-      const dt = lastFrameTime - firstFrameTime;
-      gaitSpeedRaw = dx / dt;
-    }
-
-    const gaitSpeedPercent = gaitSpeedRaw * 100;
-
-    // 結果表示
-    document.getElementById("pelvisResult").innerHTML = `
-      <strong>骨盤の傾き</strong><br>
-      右：${maxPelvisTiltRight.toFixed(1)}°<br>
-      左：${maxPelvisTiltLeft.toFixed(1)}°
-    `;
-
-    document.getElementById("hipAbductionResult").innerHTML = `
-      <strong>外転角度（最大）</strong><br>
-      右：${maxHipAbductionRight.toFixed(1)}°<br>
-      左：${maxHipAbductionLeft.toFixed(1)}°
-    `;
-
-    document.getElementById("hipAdductionResult").innerHTML = `
-      <strong>内転角度（最大）</strong><br>
-      右：${maxHipAdductionRight.toFixed(1)}°<br>
-      左：${maxHipAdductionLeft.toFixed(1)}°
-    `;
-
-    document.getElementById("speedResult").textContent =
-      `歩く速さ（相対速度）：${gaitSpeedPercent.toFixed(1)} %`;
-
-    // 左右バランス
-    const balanceRight = 100 - maxPelvisTiltRight;
-    const balanceLeft = 100 - maxPelvisTiltLeft;
-
-    document.getElementById("symmetryResult").innerHTML = `
-      <strong>左右のバランス</strong><br>
-      右：${balanceRight.toFixed(1)}<br>
-      左：${balanceLeft.toFixed(1)}
-    `;
-
-    document.getElementById("resultBox").style.display = "block";
-    document.getElementById("videoStatus").textContent = "解析が完了しました。";
-
-    // 履歴保存
-    const conditionLabel =
-      document.getElementById("surgeryDiffText").textContent || "条件未設定";
-
-    historyLabels.push(conditionLabel);
-    historyPelvis.push(Number(((maxPelvisTiltRight + maxPelvisTiltLeft) / 2).toFixed(1)));
-    historyHipAbd.push(Number(((maxHipAbductionRight + maxHipAbductionLeft) / 2).toFixed(1)));
-    historyHipAdd.push(Number(((maxHipAdductionRight + maxHipAdductionLeft) / 2).toFixed(1)));
-    historySpeed.push(Number(gaitSpeedPercent.toFixed(1)));
-
-    updateCompareChart();
-    saveHistory();
-
-    // 歩行タイプ診断
-    const types = diagnoseGait(
-      maxPelvisTiltRight, maxPelvisTiltLeft,
-      maxHipAbductionRight, maxHipAbductionLeft,
-      maxHipAdductionRight, maxHipAdductionLeft,
-      gaitSpeedPercent
-    );
-
-    document.getElementById("typeContent").innerHTML =
-      `<ul>${types.map(t => `<li>${t}</li>`).join("")}</ul>`;
-
-    document.getElementById("typeBox").style.display = "block";
-
-    // おすすめエクササイズ
-    const recs = recommendExercises(
-      maxPelvisTiltRight, maxPelvisTiltLeft,
-      maxHipAbductionRight, maxHipAbductionLeft,
-      maxHipAdductionRight, maxHipAdductionLeft,
-      gaitSpeedPercent
-    );
-
-    const exerciseContent = document.getElementById("exerciseContent");
-
-    if (recs.length === 0) {
-      exerciseContent.innerHTML =
-        "<p>大きな問題は見られませんでした。今の歩き方を続けていきましょう。</p>";
-    } else {
-      const grouped = {};
-      recs.forEach(r => {
-        if (!grouped[r.category]) grouped[r.category] = [];
-        grouped[r.category].push(r);
-      });
-
-      exerciseContent.innerHTML = Object.keys(grouped)
-  .map(cat => {
-    return `
-      <h4 style="margin-top:16px; font-weight:700;">${cat}</h4>
-      ${grouped[cat]
-        .map(r => {
-          return `
-            <div style="margin-bottom:16px; display:flex; gap:12px; align-items:center;">
-              <img src="${getThumbnail(r.url)}"
-                style="width:120px; height:90px; border-radius:8px; object-fit:cover;">
-              <div>
-                <div>${r.name}</div>
-                <a class="exercise-link" href="${r.url}" target="_blank" rel="noopener noreferrer">
-                  動画を見る（YouTube）
-                </a>
-              </div>
-            </div>
-          `;
-        })
-        .join("")}
-    `;
-  })
-  .join("");
-
-    document.getElementById("exerciseBox").style.display = "block";
-
-    // PDF用に解析結果を保存
-    lastAnalysisResult = {
-      pelvisR: maxPelvisTiltRight,
-      pelvisL: maxPelvisTiltLeft,
-      abdR: maxHipAbductionRight,
-      abdL: maxHipAbductionLeft,
-      addR: maxHipAdductionRight,
-      addL: maxHipAdductionLeft,
-      speedPercent: gaitSpeedPercent,
-      types,
-      conditionLabel
-    };
-
-    video.controls = true;
-    analyzeBtn.disabled = false;
-  }
-
-  processFrame();
+  video.controls = true;
+  analyzeBtn.disabled = false;
 }
 
 /* ---------------------------------------------------------
-   PDFレポート生成（jsPDF + 日本語フォント）
+   PDFレポート生成（jsPDF + 日本語フォント）※111 の最新版
 --------------------------------------------------------- */
 async function generatePdfReport() {
   const { jsPDF } = window.jspdf;
