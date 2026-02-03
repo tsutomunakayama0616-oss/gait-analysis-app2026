@@ -1,4 +1,4 @@
-const CACHE_NAME = "gait-analysis-app-2026-v6";
+const CACHE_NAME = "gait-analysis-app-2026-v7";
 
 const URLS_TO_CACHE = [
   "./",
@@ -41,4 +41,5 @@ self.addEventListener("fetch", (event) => {
       return response || fetch(event.request);
     })
   );
+
 });
