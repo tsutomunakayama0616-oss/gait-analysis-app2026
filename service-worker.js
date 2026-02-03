@@ -1,12 +1,13 @@
-const CACHE_NAME = "gait-analysis-app-2026-v1";
+const CACHE_NAME = "gait-analysis-app-2026-v3";
+
 const URLS_TO_CACHE = [
   "./",
   "./index.html",
   "./script.js",
   "./manifest.json",
   "./pdf-font.js",
-  "./icons/icon-192.png",
-  "./icons/icon-512.png"
+  "./icon-192.png",
+  "./icon-512.png"
 ];
 
 // インストール時にキャッシュ
@@ -18,7 +19,7 @@ self.addEventListener("install", (event) => {
   );
 });
 
-// 古いキャッシュの削除
+// 古いキャッシュを削除
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
@@ -33,12 +34,11 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// オフライン対応：キャッシュ優先
+// キャッシュ優先
 self.addEventListener("fetch", (event) => {
   event.respondWith(
     caches.match(event.request).then((response) => {
-      if (response) return response;
-      return fetch(event.request);
+      return response || fetch(event.request);
     })
   );
 });
