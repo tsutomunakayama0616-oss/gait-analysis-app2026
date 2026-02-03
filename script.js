@@ -704,25 +704,28 @@ async function analyzeVideo() {
       });
 
       exerciseContent.innerHTML = Object.keys(grouped)
-        .map(cat => `
-          <h4 style="margin-top:16px; font-weight:700;">${cat}</h4>
-          ${grouped[cat]
-            .map(r => `
-              <div style="margin-bottom:16px; display:flex; gap:12px; align-items:center;">
-                <img src="${getThumbnail(r.url)}"
-                  style="width:120px; height:90px; border-radius:8px; object-fit:cover;">
-                <div>
-                  <div>${r.name}</div>
-                  <a class="exercise-link" href="${r.url}" target="_blank" rel="noopener noreferrer">
-                    動画を見る（YouTube）
-                  </a>
-                </div>
+  .map(cat => {
+    return `
+      <h4 style="margin-top:16px; font-weight:700;">${cat}</h4>
+      ${grouped[cat]
+        .map(r => {
+          return `
+            <div style="margin-bottom:16px; display:flex; gap:12px; align-items:center;">
+              <img src="${getThumbnail(r.url)}"
+                style="width:120px; height:90px; border-radius:8px; object-fit:cover;">
+              <div>
+                <div>${r.name}</div>
+                <a class="exercise-link" href="${r.url}" target="_blank" rel="noopener noreferrer">
+                  動画を見る（YouTube）
+                </a>
               </div>
-            `)
-            .join("")}
-        `)
-        .join("");
-    }
+            </div>
+          `;
+        })
+        .join("")}
+    `;
+  })
+  .join("");
 
     document.getElementById("exerciseBox").style.display = "block";
 
