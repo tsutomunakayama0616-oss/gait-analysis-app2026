@@ -3,11 +3,9 @@
 --------------------------------------------------------- */
 let poseLandmarker = null;
 let runningMode = "IMAGE";
-
 let liveStream = null;
 let liveAnimationId = null;
 let videoAnimationId = null;
-
 let compareChart = null;
 
 const historyLabels = [];
@@ -18,7 +16,6 @@ const historySpeed = [];
 
 let previousStability = null;
 let previousSymmetry = null;
-
 let loadedVideoURL = null;
 
 // 録画用
@@ -49,17 +46,13 @@ const exerciseList = [
   { id:2, category:"ストレッチ", name:"太ももの前を伸ばすストレッチ", url:"https://youtu.be/lVpF9TiepLg" },
   { id:3, category:"ストレッチ", name:"股関節の前を伸ばすストレッチ", url:"https://youtu.be/XIA80pBZ3ws" },
   { id:4, category:"ストレッチ", name:"内ももを伸ばすストレッチ", url:"https://youtu.be/racb4M_hycM" },
-
   { id:7, category:"筋力トレーニング（おしり）", name:"おしりの筋肉を意識して力を入れる運動", url:"https://youtu.be/4ckJ67_8IB8" },
   { id:8, category:"筋力トレーニング（おしり）", name:"おしりの筋肉を使ったブリッジ運動", url:"https://youtu.be/9zKZ-YRmU8I" },
   { id:9, category:"筋力トレーニング（おしり）", name:"立ったまま行うおしりの横の筋トレ", url:"https://youtu.be/aikGoCaTFFI" },
-
   { id:10, category:"筋力トレーニング（太もも）", name:"太ももの前の筋肉を目覚めさせる運動", url:"https://youtu.be/rweyU-3O3zo" },
   { id:11, category:"筋力トレーニング（太もも）", name:"足を持ち上げる運動（SLR）", url:"https://youtu.be/fNM6w_RnVRk" },
-
   { id:14, category:"バランス練習", name:"前後に足を並べて立つバランス練習", url:"https://youtu.be/F0OVS9LT1w4" },
   { id:15, category:"バランス練習", name:"片脚立ちのバランス練習", url:"https://youtu.be/HUjoGJtiknc" },
-
   { id:16, category:"有酸素運動", name:"ウォーキング", url:"https://youtu.be/Cs4NOzgkS8s" },
   { id:17, category:"有酸素運動", name:"自転車こぎの運動", url:"https://youtu.be/12_J_pr-MUE" },
   { id:18, category:"有酸素運動", name:"水の中での運動", url:"https://youtu.be/xqj3dn9mw50" }
@@ -136,30 +129,44 @@ function loadHistory() {
 }
 
 /* ---------------------------------------------------------
-   MediaPipe PoseLandmarker 初期化
+   MediaPipe PoseLandmarker 初期化（完全修正版）
+   Safari / iPhone / PWA でも確実に動く安定版
 --------------------------------------------------------- */
 async function initPoseLandmarker() {
+  // すでに初期化済みなら何もしない
   if (poseLandmarker) return;
 
-  if (!window.FilesetResolver || !window.PoseLandmarker || !window.DrawingUtils) {
-    console.error("MediaPipe がまだ読み込まれていません。");
-    return;
+  try {
+    // vision_bundle.js が読み込まれているか確認
+    if (typeof FilesetResolver === "undefined" ||
+        typeof PoseLandmarker === "undefined" ||
+        typeof DrawingUtils === "undefined") {
+      console.error("MediaPipe の読み込みがまだ完了していません。");
+      return;
+    }
+
+    // WASM ディレクトリを指定（正しいパス）
+    const vision = await FilesetResolver.forVisionTasks(
+      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
+    );
+
+    // PoseLandmarker 初期化
+    poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+      baseOptions: {
+        modelAssetPath:
+          "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task"
+      },
+      runningMode: "VIDEO",
+      numPoses: 1
+    });
+
+    runningMode = "VIDEO";
+    console.log("PoseLandmarker 初期化完了");
+
+  } catch (e) {
+    console.error("PoseLandmarker 初期化エラー:", e);
+    poseLandmarker = null;
   }
-
-  const vision = await window.FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/wasm"
-  );
-
-  poseLandmarker = await window.PoseLandmarker.createFromOptions(vision, {
-    baseOptions: {
-      modelAssetPath:
-        "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task"
-    },
-    runningMode: "VIDEO",
-    numPoses: 1
-  });
-
-  runningMode = "VIDEO";
 }
 
 /* ---------------------------------------------------------
@@ -175,7 +182,6 @@ document.getElementById("surgeryDate").addEventListener("change", () => {
   }
 
   const diffDays = Math.floor((today - inputDate) / (1000 * 60 * 60 * 24));
-
   const text =
     diffDays >= 0
       ? `手術後 ${diffDays}日`
@@ -258,6 +264,7 @@ document.getElementById("startLiveBtn").addEventListener("click", async () => {
 
   try {
     await initPoseLandmarker();
+
     if (!poseLandmarker) {
       document.getElementById("liveError").textContent =
         "骨格モデルの読み込みに失敗しました。";
@@ -463,6 +470,7 @@ async function analyzeVideo() {
   document.getElementById("videoStatus").textContent = "解析中…";
 
   await initPoseLandmarker();
+
   if (!poseLandmarker) {
     document.getElementById("videoError").textContent =
       "骨格モデルの読み込みに失敗しました。";
@@ -695,7 +703,6 @@ async function analyzeVideo() {
         grouped[r.category].push(r);
       });
 
-      // ★ 完全修正版（テンプレート文字列の破綻を修正）
       exerciseContent.innerHTML = Object.keys(grouped)
         .map(cat => `
           <h4 style="margin-top:16px; font-weight:700;">${cat}</h4>
@@ -873,7 +880,7 @@ document.getElementById("videoFileInput").addEventListener("change", (e) => {
 });
 
 /* ---------------------------------------------------------
-   カメラ停止＋録画停止（誤記 livestream → liveStream 修正済み）
+   カメラ停止＋録画停止
 --------------------------------------------------------- */
 document.getElementById("stopLiveBtn").addEventListener("click", () => {
   if (liveAnimationId) {
