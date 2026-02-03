@@ -7,11 +7,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
 <!-- PWA -->
-<link rel="manifest" href="manifest.json" />
+<link rel="manifest" href="manifest.json?v=4" />
 <script>
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("service-worker.js");
+    navigator.serviceWorker.register("service-worker.js?v=4");
   });
 }
 </script>
@@ -30,8 +30,8 @@ if ("serviceWorker" in navigator) {
 <!-- 日本語フォント読み込み -->
 <script src="pdf-font.js"></script>
 
-<!-- MediaPipe PoseLandmarker（script.js と整合する非モジュール版） -->
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/vision_bundle.js"></script>
+<!-- MediaPipe PoseLandmarker（非モジュール版 / キャッシュ破壊付き） -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/vision_bundle.js?v=3"></script>
 
 <style>
 /* あなたの iOS 風 UI はそのまま残しています */
@@ -194,7 +194,6 @@ video, canvas {
   <!-- 使用方法セクション -->
   <section id="usageSection" class="section active">
 
-    <!-- ※ここはあなたの UI をそのまま残しています -->
     <div class="card">
       <h2>📘 アプリの使用方法</h2>
 
@@ -349,7 +348,8 @@ video, canvas {
 </div>
 
 <!-- アプリ本体 -->
-<script src="script.js"></script>
+<script src="script.js?v=4"></script>
 
 </body>
+
 </html>

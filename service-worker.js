@@ -1,4 +1,4 @@
-const CACHE_NAME = "gait-analysis-app-2026-v3";
+const CACHE_NAME = "gait-analysis-app-2026-v4";
 
 const URLS_TO_CACHE = [
   "./",
