@@ -799,14 +799,33 @@ function generatePdfReport() {
 
   /* ③ 動画の静止画 */
   const canvas = document.getElementById("analysisCanvas");
-  const imgData = canvas.toDataURL("image/png");
+const imgData = canvas.toDataURL("image/png");
 
-  doc.setFontSize(16);
-  doc.text("動画の静止画", margin, y);
-  y += 8;
+// キャンバスの実際の縦横比
+const canvasWidth = canvas.width;
+const canvasHeight = canvas.height;
+const aspectRatio = canvasWidth / canvasHeight;
 
-  doc.addImage(imgData, "PNG", margin, y, 180, 100);
-  y += 110;
+// PDF に貼る最大サイズ（mm）
+const maxWidth = 180;  // 横方向の最大幅
+const maxHeight = 120; // 縦方向の最大高さ
+
+let pdfWidth = maxWidth;
+let pdfHeight = pdfWidth / aspectRatio;
+
+// 高さがオーバーする場合は高さ基準に調整
+if (pdfHeight > maxHeight) {
+    pdfHeight = maxHeight;
+    pdfWidth = pdfHeight * aspectRatio;
+}
+
+doc.setFontSize(16);
+doc.text("動画の静止画", margin, y);
+y += 8;
+
+// 縦横比を維持したまま PDF に貼り付け
+doc.addImage(imgData, "PNG", margin, y, pdfWidth, pdfHeight);
+y += pdfHeight + 10;
 
   /* ④ 歩き方の結果（左右別） */
   doc.setFontSize(16);
@@ -877,3 +896,4 @@ window.addEventListener("load", () => {
 document.getElementById("pdfReportBtn").addEventListener("click", () => {
   generatePdfReport();
 });
+
