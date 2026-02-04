@@ -1,13 +1,10 @@
 {
-  "id": "gait-analysis-app-2026",
-  "name": "歩行解析アプリ 2026",
+  "name": "歩行解析アプリ",
   "short_name": "歩行解析",
-  "lang": "ja",
-  "start_url": "./index.html?v=7",
+  "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#ffffff",
-  "orientation": "portrait",
+  "background_color": "#f2f2f7",
+  "theme_color": "#007aff",
   "icons": [
     {
       "src": "icon-192.png",
