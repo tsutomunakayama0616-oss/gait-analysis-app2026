@@ -896,4 +896,3 @@ window.addEventListener("load", () => {
 document.getElementById("pdfReportBtn").addEventListener("click", () => {
   generatePdfReport();
 });
-
