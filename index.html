@@ -1,178 +1,209 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
-<meta charset="UTF-8" />
-<title>歩行解析アプリ</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="UTF-8" />
+  <title>歩行解析アプリ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-<!-- PWA -->
-<link rel="manifest" href="manifest.json?v=5" />
-<script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("service-worker.js?v=6");
-  });
-}
-</script>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => {
+        navigator.serviceWorker.register("service-worker.js");
+      });
+    }
+  </script>
 
-<!-- Google Fonts -->
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap" rel="stylesheet" />
+  <!-- フォント -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap"
+    rel="stylesheet"
+  />
 
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- jsPDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- jsPDF（PDF生成） -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 
-<!-- 日本語フォント読み込み -->
+<!-- 日本語フォント（PDF用） -->
 <script src="pdf-font.js"></script>
 
-<!-- MediaPipe PoseLandmarker（非モジュール版 / Safari対応） -->
-<script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0/vision_bundle.js" crossorigin="anonymous"></script>
+  <!-- MediaPipe PoseLandmarker -->
+  <script type="module">
+    import {
+      PoseLandmarker,
+      FilesetResolver,
+      DrawingUtils
+    } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.0";
 
-<style>
-/* あなたの iOS 風 UI はそのまま残しています */
-body {
-  margin: 0;
-  padding: 0;
-  font-family: "Noto Sans JP", sans-serif;
-  background: #f2f2f7;
-  color: #1c1c1e;
-}
-header {
-  text-align: center;
-  padding: 20px 10px;
-  background: white;
-  border-bottom: 1px solid #e5e5ea;
-}
-.title {
-  font-size: 22px;
-  font-weight: 700;
-}
-.subtitle {
-  font-size: 14px;
-  margin-top: 4px;
-  color: #666;
-}
-.container {
-  width: 100%;
-  max-width: 480px;
-  margin: auto;
-  padding: 14px;
-}
-.mode-switch-top {
-  margin-bottom: 8px;
-}
-.mode-switch {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-.mode-button {
-  flex: 1;
-  padding: 12px;
-  font-size: 15px;
-  border-radius: 10px;
-  border: none;
-  background: #e5e5ea;
-  color: #333;
-  font-weight: 600;
-}
-.mode-button.active {
-  background: #007aff;
-  color: white;
-}
-.section { display: none; }
-.section.active { display: block; }
-.card {
-  background: white;
-  padding: 16px;
-  border-radius: 14px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  margin-bottom: 16px;
-  position: relative;
-}
-#recIndicator {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background: rgba(0,0,0,0.6);
-  color: white;
-  padding: 6px 10px;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 700;
-  display: none;
-}
-.big-button {
-  width: 100%;
-  padding: 16px;
-  margin-top: 12px;
-  font-size: 18px;
-  font-weight: 700;
-  border-radius: 12px;
-  border: none;
-  background: #007aff;
-  color: white;
-}
-.stop-button {
-  width: 100%;
-  padding: 16px;
-  margin-top: 12px;
-  font-size: 18px;
-  font-weight: 700;
-  border-radius: 12px;
-  border: none;
-  background: #ff3b30;
-  color: white;
-}
-.result-box {
-  background: white;
-  padding: 16px;
-  border-radius: 14px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-  margin-top: 20px;
-  font-size: 15px;
-}
-video, canvas {
-  width: 100%;
-  border-radius: 12px;
-  margin-top: 12px;
-}
-.primary-button {
-  width: 100%;
-  padding: 14px;
-  margin-top: 12px;
-  border-radius: 12px;
-  border: none;
-  background: #007aff;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 700;
-}
-.ios-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 10px;
-}
-.ios-table th, .ios-table td {
-  padding: 10px;
-  border-bottom: 1px solid #e5e5ea;
-  text-align: left;
-}
-.ios-table th {
-  background: #f9f9fb;
-  font-weight: 600;
-}
-</style>
+    window.PoseLandmarker = PoseLandmarker;
+    window.FilesetResolver = FilesetResolver;
+    window.DrawingUtils = DrawingUtils;
+  </script>
 
+  <!-- iOS風デザイン -->
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Noto Sans JP", sans-serif;
+      background: #f2f2f7;
+      color: #1c1c1e;
+    }
+    header {
+      text-align: center;
+      padding: 20px 10px;
+      background: white;
+      border-bottom: 1px solid #e5e5ea;
+    }
+    .title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111;
+    }
+    .subtitle {
+      font-size: 14px;
+      margin-top: 4px;
+      color: #666;
+    }
+    .container {
+      width: 100%;
+      max-width: 480px;
+      margin: auto;
+      padding: 14px;
+    }
+
+    /* 2段UI */
+    .mode-switch-top {
+      margin-bottom: 8px;
+    }
+    .mode-switch {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .mode-button {
+      flex: 1;
+      padding: 12px;
+      font-size: 15px;
+      border-radius: 10px;
+      border: none;
+      background: #e5e5ea;
+      color: #333;
+      font-weight: 600;
+    }
+    .mode-button.active {
+      background: #007aff;
+      color: white;
+    }
+
+    .section { display: none; }
+    .section.active { display: block; }
+
+    .card {
+      background: white;
+      padding: 16px;
+      border-radius: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    /* REC表示 */
+    #recIndicator {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.6);
+      color: white;
+      padding: 6px 10px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 700;
+      display: none;
+    }
+
+    /* 大きなボタン */
+    .big-button {
+      width: 100%;
+      padding: 16px;
+      margin-top: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      border-radius: 12px;
+      border: none;
+      background: #007aff;
+      color: white;
+      box-shadow: 0 4px 10px rgba(0,122,255,0.4);
+    }
+    .big-button:disabled {
+      background: #b0c9ff;
+      box-shadow: none;
+    }
+    .stop-button {
+      width: 100%;
+      padding: 16px;
+      margin-top: 12px;
+      font-size: 18px;
+      font-weight: 700;
+      border-radius: 12px;
+      border: none;
+      background: #ff3b30;
+      color: white;
+      box-shadow: 0 4px 10px rgba(255,59,48,0.4);
+    }
+
+    /* iOSカード */
+    .result-box {
+      background: white;
+      padding: 16px;
+      border-radius: 14px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+      margin-top: 20px;
+      font-size: 15px;
+    }
+
+    video, canvas {
+      width: 100%;
+      border-radius: 12px;
+      margin-top: 12px;
+    }
+
+    .primary-button {
+      width: 100%;
+      padding: 14px;
+      margin-top: 12px;
+      border-radius: 12px;
+      border: none;
+      background: #007aff;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      box-shadow: 0 4px 10px rgba(0,122,255,0.4);
+    }
+
+    .ios-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    .ios-table th, .ios-table td {
+      padding: 10px;
+      border-bottom: 1px solid #e5e5ea;
+      text-align: left;
+    }
+    .ios-table th {
+      background: #f9f9fb;
+      font-weight: 600;
+    }
+  </style>
 </head>
 
 <body>
-
 <header>
   <div class="title">歩行解析アプリ</div>
   <div class="subtitle">今日の歩き方をチェックしてみましょう</div>
@@ -180,18 +211,18 @@ video, canvas {
 
 <div class="container">
 
-  <!-- 使用方法 -->
+  <!-- 上段：使用方法 -->
   <div class="mode-switch-top">
     <button id="usageModeBtn" class="mode-button active">📘 アプリの使用方法</button>
   </div>
 
-  <!-- 撮影補助＋動作解析 -->
+  <!-- 下段：撮影補助＋動作解析 -->
   <div class="mode-switch">
     <button id="liveModeBtn" class="mode-button">📸 撮影補助</button>
     <button id="videoModeBtn" class="mode-button">🎥 動作解析</button>
   </div>
 
-  <!-- 使用方法セクション -->
+  <!-- 使用方法 -->
   <section id="usageSection" class="section active">
     <div class="card">
       <h2>📘 アプリの使用方法</h2>
@@ -253,7 +284,7 @@ video, canvas {
     </div>
   </section>
 
-  <!-- 撮影補助セクション -->
+  <!-- 撮影補助 -->
   <section id="liveSection" class="section">
     <div class="card">
       <h2>📸 撮影補助モード</h2>
@@ -280,7 +311,7 @@ video, canvas {
     </div>
   </section>
 
-  <!-- 動作解析セクション -->
+  <!-- 動作解析 -->
   <section id="videoSection" class="section">
     <div class="card">
       <h2>🎥 動作解析モード</h2>
@@ -290,6 +321,7 @@ video, canvas {
       <div id="surgeryDiffText" style="margin-top:6px; color:#555;"></div>
 
       <input type="file" id="videoFileInput" accept="video/*" style="margin-top:12px;">
+
       <button id="analyzeVideoBtn" class="primary-button">動作を解析する</button>
 
       <video id="analysisVideo" controls playsinline muted></video>
@@ -326,7 +358,6 @@ video, canvas {
       </button>
 
       <h3 style="margin-top:20px;">回復の変化を比べる</h3>
-
       <table id="resultTable" class="ios-table">
         <thead>
           <tr>
@@ -346,9 +377,7 @@ video, canvas {
 
 </div>
 
-<!-- アプリ本体 -->
-<script src="script.js?v=7"></script>
-
+<script src="script.js"></script>
 </body>
 
 </html>
