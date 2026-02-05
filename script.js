@@ -781,8 +781,8 @@ function generatePdfReport() {
     format: "a4"
   });
 
-  // 日本語フォント（pdf-font.js を読み込んでいる前提）
-  doc.setFont("NotoSansJP");
+  // 日本語フォント（NotoSansJP-Regular.js を読み込んでいる前提）
+  doc.setFont("NotoSansJP-Regular.js");
 
   const margin = 15;
   let y = margin;
@@ -896,4 +896,5 @@ window.addEventListener("load", () => {
 document.getElementById("pdfReportBtn").addEventListener("click", () => {
   generatePdfReport();
 });
+
 
